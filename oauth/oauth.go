@@ -13,6 +13,9 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/amwolff/google-gtfs-realtime-tools/provider"
+	"github.com/golang/protobuf/proto"
 )
 
 const (
@@ -94,9 +97,27 @@ func doExchange(
 	return ret, nil
 }
 
-type FeedFormFile struct {
+type FeedMessageWrapper struct {
 	Name string
 	File io.Reader
+}
+
+func WrapperFromProvider(name string, feedProvider provider.FeedMessageProvider) (
+	FeedMessageWrapper,
+	error) {
+
+	m, err := feedProvider.Provide()
+	if err != nil {
+		return FeedMessageWrapper{}, fmt.Errorf("Provide: %w", err)
+	}
+	b, err := proto.Marshal(m)
+	if err != nil {
+		return FeedMessageWrapper{}, fmt.Errorf("Marshal: %w", err)
+	}
+	return FeedMessageWrapper{
+		Name: name,
+		File: bytes.NewReader(b),
+	}, nil
 }
 
 // TODO: this could be done a little bit better (?):
@@ -112,7 +133,7 @@ func createRFC2388Form(values map[string]interface{}) (io.Reader, string, error)
 			if err := w.WriteField(k, x); err != nil {
 				return nil, "", fmt.Errorf("WriteField: %w", err)
 			}
-		case FeedFormFile:
+		case FeedMessageWrapper:
 			f, err := w.CreateFormFile(k, x.Name)
 			if err != nil {
 				return nil, "", fmt.Errorf("CreateFormFile: %w", err)
@@ -269,9 +290,9 @@ func getBearer(token string) string {
 	return fmt.Sprintf("Bearer %s", token)
 }
 
-func (c *Client) UploadFeed(
+func (c *Client) UploadFeedMessage(
 	alkaliAccountID, realtimeFeedID string,
-	feed FeedFormFile) error {
+	wrapper FeedMessageWrapper) error {
 
 	form, contentType, err := createRFC2388Form(map[string]interface{}{
 		"alkali_application_name": "transit",
@@ -279,7 +300,7 @@ func (c *Client) UploadFeed(
 		"alkali_upload_type":      "realtime_push_upload",
 		"alkali_application_id":   "100003100",
 		"realtime_feed_id":        realtimeFeedID,
-		"file":                    feed,
+		"file":                    wrapper,
 	})
 
 	req, err := http.NewRequest(http.MethodPost, c.feedUploadURL, form)

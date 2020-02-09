@@ -160,7 +160,7 @@ func TestCreateRFC2388Form(t *testing.T) {
 		panic(fmt.Sprintf("ReadAll: %v", err))
 	}
 
-	feed := FeedFormFile{
+	wrapper := FeedMessageWrapper{
 		Name: filepath.Base(f.Name()),
 		File: bytes.NewReader(testBytes),
 	}
@@ -171,7 +171,7 @@ func TestCreateRFC2388Form(t *testing.T) {
 		"alkali_upload_type":      "realtime_push_upload",
 		"alkali_application_id":   "100003100",
 		"realtime_feed_id":        "2f182302-da25-4562-aa14-7890da496693",
-		"file":                    feed,
+		"file":                    wrapper,
 	})
 	assert.NoError(t, err)
 
@@ -479,4 +479,8 @@ func TestClient_MaybeRefreshAccessToken(t *testing.T) {
 	if err := os.Remove(cleanTokensPath); err != nil {
 		panic(fmt.Sprintf("Remove: %v", err))
 	}
+}
+
+func TestClient_UploadFeedMessage(t *testing.T) {
+
 }

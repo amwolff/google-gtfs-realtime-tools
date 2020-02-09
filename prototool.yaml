@@ -1,0 +1,12 @@
+excludes:
+  - /work/transit/gtfs-realtime/spec/es
+protoc:
+  includes:
+    - /work/transit/gtfs-realtime/proto
+generate:
+  go_options:
+    import_path: github.com/amwolff/google-gtfs-realtime-tools
+  plugins:
+    - name: go
+      type: go
+      output: /work/gen/go

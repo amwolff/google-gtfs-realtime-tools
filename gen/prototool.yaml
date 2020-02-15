@@ -5,8 +5,8 @@ protoc:
     - /work/transit/gtfs-realtime/proto
 generate:
   go_options:
-    import_path: github.com/amwolff/google-gtfs-realtime-tools
+    import_path: github.com/amwolff/google-gtfs-realtime-tools/gen
   plugins:
     - name: go
       type: go
-      output: /work/gen/go
+      output: /work/go

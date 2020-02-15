@@ -125,6 +125,22 @@ func getRefreshAccessTokenHandler(
 	}
 }
 
+func getUploadFeedMessageHandler(t *testing.T) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Check form correctness for this particular request.
+		if err := r.ParseMultipartForm(gigabyte); err != nil {
+			panic(fmt.Sprintf("ParseMultipartForm: %v", err))
+		}
+		assert.Equal(t, []string{"transit"}, r.MultipartForm.Value["alkali_application_name"])
+		assert.Equal(t, []string{""}, r.MultipartForm.Value["alkali_account_id"])
+		assert.Equal(t, []string{""}, r.MultipartForm.Value["alkali_upload_type"])
+		assert.Equal(t, []string{""}, r.MultipartForm.Value["alkali_application_id"])
+		assert.Equal(t, []string{""}, r.MultipartForm.Value["realtime_feed_id"])
+
+		// TODO verify more things
+	}
+}
+
 func mustLoadCachedTokens(path string) tokenData {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -482,5 +498,26 @@ func TestClient_MaybeRefreshAccessToken(t *testing.T) {
 }
 
 func TestClient_UploadFeedMessage(t *testing.T) {
+	ts := httptest.NewTLSServer(getUploadFeedMessageHandler(t))
+	defer ts.Close()
 
+	secretFile, err := os.Open(filepath.Clean("./testdata/client_secrets.json"))
+	if err != nil {
+		panic(fmt.Sprintf("Open: %v", err))
+	}
+	defer secretFile.Close()
+
+	tsClient := ts.Client()
+	tokensPath := "./testdata/test_tokens"
+
+	client, err := NewClient(
+		tsClient,
+		secretFile,
+		tokensPath,
+		DefaultTokenExchangeURL,
+		"",
+		ts.URL)
+	assert.NoError(t, err)
+
+	// TODO proceed with this code.
 }

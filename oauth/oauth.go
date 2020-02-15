@@ -1,4 +1,5 @@
-// package oauth is based on https://support.google.com/transitpartners/answer/2529132?hl=en&ref_topic=2527461.
+// Package oauth implements communication with the Google Realtime Transit API.
+// It's based on https://support.google.com/transitpartners/answer/2529132?hl=en&ref_topic=2527461.
 package oauth
 
 import (
@@ -14,6 +15,7 @@ import (
 	"path/filepath"
 	"time"
 
+	transitrealtime "github.com/amwolff/google-gtfs-realtime-tools/gen/go"
 	"github.com/amwolff/google-gtfs-realtime-tools/provider"
 	"github.com/golang/protobuf/proto"
 )
@@ -97,34 +99,18 @@ func doExchange(
 	return ret, nil
 }
 
+// FeedMessageWrapper encapsulates GTFS-realtime dataset along with its
+// filename. When communicating with Google - Name is an optional field to fill.
 type FeedMessageWrapper struct {
 	Name string
 	File io.Reader
 }
 
-func WrapperFromProvider(name string, feedProvider provider.FeedMessageProvider) (
-	FeedMessageWrapper,
-	error) {
-
-	m, err := feedProvider.Provide()
-	if err != nil {
-		return FeedMessageWrapper{}, fmt.Errorf("Provide: %w", err)
-	}
-	b, err := proto.Marshal(m)
-	if err != nil {
-		return FeedMessageWrapper{}, fmt.Errorf("Marshal: %w", err)
-	}
-	return FeedMessageWrapper{
-		Name: name,
-		File: bytes.NewReader(b),
-	}, nil
-}
-
-// TODO: this could be done a little bit better (?):
-//       1. Create better wrapper type for gtfs-realtime feed (??)
-//       2. Use mime/multipart.Form instead of map[string]interface{} (???)
-//       But since it's not really exported I'm leaving this the way it is.
 func createRFC2388Form(values map[string]interface{}) (io.Reader, string, error) {
+	// NOTICE: this could be done a little bit better (?):
+	//         1. Create better wrapper type for gtfs-realtime feed (??)
+	//         2. Use mime/multipart.Form instead of map[string]interface{} (???)
+	//         But since it's not really exported I'm leaving this the way it is.
 	b := &bytes.Buffer{}
 	w := multipart.NewWriter(b)
 	for k, v := range values {
@@ -187,6 +173,17 @@ func writeTokensToFile(tokens tokenData, path string) error {
 	return nil
 }
 
+// NewClient returns Client and any error encountered basing on following token
+// policy:
+// 1. If tokens cache exist under valid tokensCachePath:
+//      Return Client initialized with cached tokens.
+// 2. In other situations:
+//      Exchange authorizationCode for tokens and return Client initialized with
+//      them. Tokens will be cached under tokensCachePath.
+//
+// It does not refresh existing Access Token.
+//
+// clientSecretJSON should be the default file provided by Google.
 func NewClient(
 	httpClient *http.Client,
 	clientSecretJSON io.Reader,
@@ -248,10 +245,15 @@ func NewClient(
 	}, nil
 }
 
+// IsAccessTokenExpired reports whether the Access Token has expired.
 func (c Client) IsAccessTokenExpired() bool {
 	return time.Now().After(c.tokens.ExpirationDate)
 }
 
+// MaybeRefreshAccessToken refreshes and caches new Access Token using Refresh
+// Token if the former has expired. It returns nil or error encountered both
+// when there was no need to refresh the token or when the token has been
+// refreshed.
 func (c *Client) MaybeRefreshAccessToken() error {
 	if !c.IsAccessTokenExpired() {
 		return nil
@@ -290,6 +292,11 @@ func getBearer(token string) string {
 	return fmt.Sprintf("Bearer %s", token)
 }
 
+// UploadFeedMessage uploads GTFS-realtime dataset and returns any error
+// encountered.
+//
+// The alkaliAccountID is the value of the "a" parameter in the Transit Partner
+// Dashboard page URL.
 func (c *Client) UploadFeedMessage(
 	alkaliAccountID, realtimeFeedID string,
 	wrapper FeedMessageWrapper) error {
@@ -326,4 +333,56 @@ func (c *Client) UploadFeedMessage(
 	}
 
 	return nil
+}
+
+var ErrChanClosed = errors.New("streaming channel is closed")
+
+// Run encapsulates Client methods and provides a way to abstract streaming of
+// GTFS-realtime feed for Data Sources. Data Source must only implement
+// provider.FeedProvider. It returns ErrChanClosed when feed is closed and any
+// other errors encountered.
+//
+// The alkaliAccountID is the value of the "a" parameter in the Transit Partner
+// Dashboard page URL.
+func (c *Client) Run(
+	feedProvider provider.FeedProvider,
+	feedFilename, alkaliAccountID, realtimeFeedID string) error {
+
+	feed := make(chan *transitrealtime.FeedMessage)
+
+	go feedProvider.Stream(feed)
+
+	for {
+		if err := c.MaybeRefreshAccessToken(); err != nil {
+			return fmt.Errorf("MaybeRefreshAccessToken: %w", err)
+		}
+
+		var msg *transitrealtime.FeedMessage
+		select {
+		case m, ok := <-feed:
+			if ok {
+				msg = m
+			} else {
+				return ErrChanClosed
+			}
+		case <-time.After(c.tokens.ExpirationDate.Sub(time.Now())):
+			continue
+		}
+
+		b, err := proto.Marshal(msg)
+		if err != nil {
+			return fmt.Errorf("Marshal: %w", err)
+		}
+
+		if err := c.UploadFeedMessage(
+			alkaliAccountID,
+			realtimeFeedID,
+			FeedMessageWrapper{
+				Name: feedFilename,
+				File: bytes.NewReader(b),
+			}); err != nil {
+
+			return fmt.Errorf("UploadFeedMessage: %w", err)
+		}
+	}
 }

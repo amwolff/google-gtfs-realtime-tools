@@ -1,8 +1,10 @@
+// Package provider contains interface used to separate Data Source from
+// communication with the API.
 package provider
 
 import transitrealtime "github.com/amwolff/google-gtfs-realtime-tools/gen/go"
 
-// FeedProvider is the interface that wraps feed message streaming.
+// FeedProvider is the interface that wraps feed messages streaming.
 //
 // Stream starts streaming GTFS-realtime dataset onto feed.
 //

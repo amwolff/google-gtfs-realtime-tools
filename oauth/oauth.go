@@ -174,16 +174,18 @@ func writeTokensToFile(tokens tokenData, path string) error {
 }
 
 // NewClient returns Client and any error encountered basing on following token
-// policy:
-// 1. If tokens cache exist under valid tokensCachePath:
-//      Return Client initialized with cached tokens.
-// 2. In other situations:
-//      Exchange authorizationCode for tokens and return Client initialized with
-//      them. Tokens will be cached under tokensCachePath.
+// policy.
+//
+// If tokens' cache exist under valid tokensCachePath it returns Client
+// initialized with cached tokens.
+//
+// In every other situation it exchanges authorizationCode for tokens and
+// returns Client initialized with them. Tokens will be cached under
+// tokensCachePath.
 //
 // It does not refresh existing Access Token.
 //
-// clientSecretJSON should be the default file provided by Google.
+// clientSecretJSON file should be the default one provided by Google.
 func NewClient(
 	httpClient *http.Client,
 	clientSecretJSON io.Reader,
@@ -340,7 +342,7 @@ var ErrChanClosed = errors.New("streaming channel is closed")
 // Run encapsulates Client methods and provides a way to abstract streaming of
 // GTFS-realtime feed for Data Sources. Data Source must only implement
 // provider.FeedProvider. It returns ErrChanClosed when feed is closed and any
-// other errors encountered.
+// other error encountered.
 //
 // The alkaliAccountID is the value of the "a" parameter in the Transit Partner
 // Dashboard page URL.

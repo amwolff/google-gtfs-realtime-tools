@@ -1,3 +1,4 @@
+// Package dummy contains example implementation of provider.FeedProvider.
 package dummy
 
 import (

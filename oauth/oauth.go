@@ -173,17 +173,8 @@ func writeTokensToFile(tokens tokenData, path string) error {
 	return nil
 }
 
-// NewClient returns Client and any error encountered basing on following token
-// policy.
-//
-// If tokens' cache exist under valid tokensCachePath it returns Client
-// initialized with cached tokens.
-//
-// In every other situation it exchanges authorizationCode for tokens and
-// returns Client initialized with them. Tokens will be cached under
-// tokensCachePath.
-//
-// It does not refresh existing Access Token.
+// NewClient returns initialized Client and any error encountered. It performs
+// exchange automatically if no tokens have been found in the tokensCachePath.
 //
 // clientSecretJSON file should be the default one provided by Google.
 func NewClient(
@@ -247,17 +238,12 @@ func NewClient(
 	}, nil
 }
 
-// IsAccessTokenExpired reports whether the Access Token has expired.
-func (c Client) IsAccessTokenExpired() bool {
+func (c Client) isAccessTokenExpired() bool {
 	return time.Now().After(c.tokens.ExpirationDate)
 }
 
-// MaybeRefreshAccessToken refreshes and caches new Access Token using Refresh
-// Token if the former has expired. It returns nil or error encountered both
-// when there was no need to refresh the token or when the token has been
-// refreshed.
-func (c *Client) MaybeRefreshAccessToken() error {
-	if !c.IsAccessTokenExpired() {
+func (c *Client) maybeRefreshAccessToken() error {
+	if !c.isAccessTokenExpired() {
 		return nil
 	}
 
@@ -297,6 +283,8 @@ func getBearer(token string) string {
 // UploadFeedMessage uploads GTFS-realtime dataset and returns any error
 // encountered.
 //
+// It automatically refreshes Access Token.
+//
 // The alkaliAccountID is the value of the "a" parameter in the Transit Partner
 // Dashboard page URL.
 func (c *Client) UploadFeedMessage(
@@ -311,6 +299,10 @@ func (c *Client) UploadFeedMessage(
 		"realtime_feed_id":        realtimeFeedID,
 		"file":                    wrapper,
 	})
+
+	if err := c.maybeRefreshAccessToken(); err != nil {
+		return fmt.Errorf("maybeRefreshAccessToken: %w", err)
+	}
 
 	req, err := http.NewRequest(http.MethodPost, c.feedUploadURL, form)
 	if err != nil {
@@ -339,10 +331,10 @@ func (c *Client) UploadFeedMessage(
 
 var ErrChanClosed = errors.New("streaming channel is closed")
 
-// Run encapsulates Client methods and provides a way to abstract streaming of
-// GTFS-realtime feed for Data Sources. Data Source must only implement
-// provider.FeedProvider. It returns ErrChanClosed when feed is closed and any
-// other error encountered.
+// Run makes it easier for Data Sources to push GTFS-realtime dataset
+// continuously. Data Source is an implementation of the provider.FeedProvider.
+//
+// It automatically refreshes Access Token.
 //
 // The alkaliAccountID is the value of the "a" parameter in the Transit Partner
 // Dashboard page URL.
@@ -355,8 +347,8 @@ func (c *Client) Run(
 	go feedProvider.Stream(feed)
 
 	for {
-		if err := c.MaybeRefreshAccessToken(); err != nil {
-			return fmt.Errorf("MaybeRefreshAccessToken: %w", err)
+		if err := c.maybeRefreshAccessToken(); err != nil {
+			return fmt.Errorf("maybeRefreshAccessToken: %w", err)
 		}
 
 		var msg *transitrealtime.FeedMessage
@@ -368,7 +360,7 @@ func (c *Client) Run(
 				return ErrChanClosed
 			}
 		case <-time.After(c.tokens.ExpirationDate.Sub(time.Now())):
-			continue
+			continue // Refresh Access Token in advance.
 		}
 
 		b, err := proto.Marshal(msg)

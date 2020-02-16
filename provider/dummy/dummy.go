@@ -1,4 +1,4 @@
-// Package dummy contains example implementation of provider.FeedProvider.
+// Package dummy contains example implementation of the provider.FeedProvider.
 package dummy
 
 import (
@@ -8,7 +8,7 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-// DummyProvider is an example implementation of provider.FeedProvider that
+// DummyProvider is an example implementation of the provider.FeedProvider that
 // streams example data. It does not close the underlying channel.
 type DummyProvider struct {
 	c     chan<- *transitrealtime.FeedMessage

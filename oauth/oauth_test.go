@@ -382,7 +382,7 @@ func TestNewClientFastPath(t *testing.T) {
 	checkTokensEquality(t, tokens, client.tokens)
 }
 
-func TestClient_IsAccessTokenExpired(t *testing.T) {
+func TestClient_isAccessTokenExpired(t *testing.T) {
 	cs, err := ioutil.ReadFile(filepath.Clean("./testdata/client_secrets.json"))
 	if err != nil {
 		panic(fmt.Sprintf("Open: %v", err))
@@ -411,7 +411,7 @@ func TestClient_IsAccessTokenExpired(t *testing.T) {
 		"")
 	assert.NoError(t, err)
 
-	assert.False(t, client.IsAccessTokenExpired())
+	assert.False(t, client.isAccessTokenExpired())
 
 	clientWithExpired, err := NewClient(
 		nil,
@@ -422,7 +422,7 @@ func TestClient_IsAccessTokenExpired(t *testing.T) {
 		"")
 	assert.NoError(t, err)
 
-	assert.True(t, clientWithExpired.IsAccessTokenExpired())
+	assert.True(t, clientWithExpired.isAccessTokenExpired())
 
 	// Cleanup.
 	if err := os.Remove(cleanTokensPath); err != nil {
@@ -430,7 +430,7 @@ func TestClient_IsAccessTokenExpired(t *testing.T) {
 	}
 }
 
-func TestClient_MaybeRefreshAccessToken(t *testing.T) {
+func TestClient_maybeRefreshAccessToken(t *testing.T) {
 	secret := mustLoadClientSecretsJSON()
 
 	ts := httptest.NewTLSServer(getRefreshAccessTokenHandler(t, secret))
@@ -466,7 +466,7 @@ func TestClient_MaybeRefreshAccessToken(t *testing.T) {
 		DefaultFeedUploadURL)
 	assert.NoError(t, err)
 
-	assert.NoError(t, client.MaybeRefreshAccessToken())
+	assert.NoError(t, client.maybeRefreshAccessToken())
 
 	tokens := tokenData{
 		AccessToken:    "1/fFAGRNJru1FTz70BzhT3Zg",
@@ -486,9 +486,9 @@ func TestClient_MaybeRefreshAccessToken(t *testing.T) {
 	checkTokensEquality(t, tokens, mustLoadCachedTokens(cleanTokensPath))
 	checkTokensEquality(t, tokens, client.tokens)
 
-	// Make sure IsAccessTokenExpired is properly called.
+	// Make sure isAccessTokenExpired is properly called.
 	for i := 0; i < 100; i++ {
-		assert.NoError(t, client.MaybeRefreshAccessToken())
+		assert.NoError(t, client.maybeRefreshAccessToken())
 	}
 
 	// Cleanup.
@@ -496,6 +496,8 @@ func TestClient_MaybeRefreshAccessToken(t *testing.T) {
 		panic(fmt.Sprintf("Remove: %v", err))
 	}
 }
+
+func TestGetBearer(t *testing.T) {}
 
 func TestClient_UploadFeedMessage(t *testing.T) {
 	ts := httptest.NewTLSServer(getUploadFeedMessageHandler(t))

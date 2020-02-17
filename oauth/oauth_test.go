@@ -60,6 +60,34 @@ func checkExchangeRequestCorrectness(
 		r.MultipartForm.Value["grant_type"])
 }
 
+func checkRefreshRequestCorrectness(
+	t *testing.T,
+	r *http.Request,
+	secret clientSecret,
+	refreshToken string) {
+
+	// Check form correctness for this particular request.
+	if err := r.ParseMultipartForm(gigabyte); err != nil {
+		panic(fmt.Sprintf("ParseMultipartForm: %v", err))
+	}
+	assert.Equal(
+		t,
+		[]string{secret.Installed.ClientID},
+		r.MultipartForm.Value["client_id"])
+	assert.Equal(
+		t,
+		[]string{secret.Installed.ClientSecret},
+		r.MultipartForm.Value["client_secret"])
+	assert.Equal(
+		t,
+		[]string{refreshToken},
+		r.MultipartForm.Value["refresh_token"])
+	assert.Equal(
+		t,
+		[]string{"refresh_token"},
+		r.MultipartForm.Value["grant_type"])
+}
+
 func getExchangeForTokensHandler(
 	t *testing.T,
 	code string,
@@ -88,7 +116,7 @@ func getNewClientHandler(
 	}
 }
 
-func getRefreshAccessTokenHandler(
+func getMaybeRefreshAccessTokenHandler(
 	t *testing.T,
 	secret clientSecret) http.HandlerFunc {
 
@@ -98,26 +126,11 @@ func getRefreshAccessTokenHandler(
 		assert.False(t, called)
 		called = true
 
-		// Check form correctness for this particular request.
-		if err := r.ParseMultipartForm(gigabyte); err != nil {
-			panic(fmt.Sprintf("ParseMultipartForm: %v", err))
-		}
-		assert.Equal(
+		checkRefreshRequestCorrectness(
 			t,
-			[]string{secret.Installed.ClientID},
-			r.MultipartForm.Value["client_id"])
-		assert.Equal(
-			t,
-			[]string{secret.Installed.ClientSecret},
-			r.MultipartForm.Value["client_secret"])
-		assert.Equal(
-			t,
-			[]string{"f472681a-051f-4671-8df5-afffd9d6c47f"},
-			r.MultipartForm.Value["refresh_token"])
-		assert.Equal(
-			t,
-			[]string{"refresh_token"},
-			r.MultipartForm.Value["grant_type"])
+			r,
+			secret,
+			"f472681a-051f-4671-8df5-afffd9d6c47f")
 
 		// Return desired response.
 		fmt.Fprint(w, `{"access_token":"1/fFAGRNJru1FTz70BzhT3Zg","expires_in"`+
@@ -125,19 +138,74 @@ func getRefreshAccessTokenHandler(
 	}
 }
 
-func getUploadFeedMessageHandler(t *testing.T) http.HandlerFunc {
+func getUploadFeedMessageTokensHandler(
+	t *testing.T,
+	secret clientSecret) http.HandlerFunc {
+
 	return func(w http.ResponseWriter, r *http.Request) {
+		checkRefreshRequestCorrectness(
+			t,
+			r,
+			secret,
+			"47452c0f-2d7f-4696-9af3-8c53cec89028")
+
+		// Return desired response.
+		fmt.Fprint(w, `{"access_token":"ba25ffba-a2b7-4d34-8225-e9477bc94619",`+
+			`"expires_in":3920,"token_type":"Bearer"}`)
+	}
+}
+
+func getUploadFeedMessageUploadHandler(
+	t *testing.T,
+	file []byte) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(
+			t,
+			"Bearer ba25ffba-a2b7-4d34-8225-e9477bc94619",
+			r.Header.Get("Authorization"))
+
 		// Check form correctness for this particular request.
 		if err := r.ParseMultipartForm(gigabyte); err != nil {
 			panic(fmt.Sprintf("ParseMultipartForm: %v", err))
 		}
-		assert.Equal(t, []string{"transit"}, r.MultipartForm.Value["alkali_application_name"])
-		assert.Equal(t, []string{""}, r.MultipartForm.Value["alkali_account_id"])
-		assert.Equal(t, []string{""}, r.MultipartForm.Value["alkali_upload_type"])
-		assert.Equal(t, []string{""}, r.MultipartForm.Value["alkali_application_id"])
-		assert.Equal(t, []string{""}, r.MultipartForm.Value["realtime_feed_id"])
+		assert.Equal(
+			t,
+			[]string{"transit"},
+			r.MultipartForm.Value["alkali_application_name"])
+		assert.Equal(
+			t,
+			[]string{"2483663d-56ce-44cd-a63f-74bb63eb6f24"},
+			r.MultipartForm.Value["alkali_account_id"])
+		assert.Equal(
+			t,
+			[]string{"realtime_push_upload"},
+			r.MultipartForm.Value["alkali_upload_type"])
+		assert.Equal(
+			t,
+			[]string{"100003100"},
+			r.MultipartForm.Value["alkali_application_id"])
+		assert.Equal(
+			t,
+			[]string{"93681f64-00a4-471a-998c-24bc9e80eca3"},
+			r.MultipartForm.Value["realtime_feed_id"])
 
-		// TODO verify more things
+		for i, h := range r.MultipartForm.File["file"] {
+			assert.Equal(t, 0, i) // There must be exactly one file.
+			assert.Equal(t, "feed.pb", h.Filename)
+
+			f, err := h.Open()
+			if err != nil {
+				panic(fmt.Sprintf("Open: %v", err))
+			}
+			defer f.Close()
+
+			b, err := ioutil.ReadAll(f)
+			if err != nil {
+				panic(fmt.Sprintf("ReadAll: %v", err))
+			}
+			assert.Equal(t, file, b)
+		}
 	}
 }
 
@@ -433,7 +501,7 @@ func TestClient_isAccessTokenExpired(t *testing.T) {
 func TestClient_maybeRefreshAccessToken(t *testing.T) {
 	secret := mustLoadClientSecretsJSON()
 
-	ts := httptest.NewTLSServer(getRefreshAccessTokenHandler(t, secret))
+	ts := httptest.NewTLSServer(getMaybeRefreshAccessTokenHandler(t, secret))
 	defer ts.Close()
 
 	secretFile, err := os.Open(filepath.Clean("./testdata/client_secrets.json"))
@@ -497,10 +565,19 @@ func TestClient_maybeRefreshAccessToken(t *testing.T) {
 	}
 }
 
-func TestGetBearer(t *testing.T) {}
-
 func TestClient_UploadFeedMessage(t *testing.T) {
-	ts := httptest.NewTLSServer(getUploadFeedMessageHandler(t))
+	b, err := ioutil.ReadFile(filepath.Clean("./testdata/trip-updates-full.asciipb"))
+	if err != nil {
+		panic(fmt.Sprintf("ReadFile: %v", err))
+	}
+
+	secret := mustLoadClientSecretsJSON()
+
+	mux := http.NewServeMux()
+	mux.Handle("/tokens", getUploadFeedMessageTokensHandler(t, secret))
+	mux.Handle("/upload", getUploadFeedMessageUploadHandler(t, b))
+
+	ts := httptest.NewTLSServer(mux)
 	defer ts.Close()
 
 	secretFile, err := os.Open(filepath.Clean("./testdata/client_secrets.json"))
@@ -509,17 +586,63 @@ func TestClient_UploadFeedMessage(t *testing.T) {
 	}
 	defer secretFile.Close()
 
+	tokensPath := "/tmp/6281ffff-bd94-4173-9cf1-1136cdd9d0d6"
+	cleanTokensPath := filepath.Clean(tokensPath)
+
+	if err := ioutil.WriteFile(
+		cleanTokensPath,
+		[]byte(`{"access_token":"06a99d0d-0f85-4987-bc96-385e39f2f611","expira`+
+			`tion_date":"1970-01-01T00:00:00Z","token_type":"Bearer","refresh_`+
+			`token":"47452c0f-2d7f-4696-9af3-8c53cec89028"}`),
+		0777); err != nil {
+
+		panic(fmt.Sprintf("WriteFile: %v", err))
+	}
+
 	tsClient := ts.Client()
-	tokensPath := "./testdata/test_tokens"
+
+	tokensURL := fmt.Sprint(ts.URL, "/tokens")
+	uploadURL := fmt.Sprint(ts.URL, "/upload")
 
 	client, err := NewClient(
 		tsClient,
 		secretFile,
 		tokensPath,
-		DefaultTokenExchangeURL,
+		tokensURL,
 		"",
-		ts.URL)
+		uploadURL)
 	assert.NoError(t, err)
 
-	// TODO proceed with this code.
+	assert.NoError(
+		t,
+		client.UploadFeedMessage(
+			"2483663d-56ce-44cd-a63f-74bb63eb6f24",
+			"93681f64-00a4-471a-998c-24bc9e80eca3",
+			FeedMessageWrapper{
+				Name: "feed.pb",
+				File: bytes.NewReader(b),
+			}))
+
+	tokens := tokenData{
+		AccessToken:    "ba25ffba-a2b7-4d34-8225-e9477bc94619",
+		ExpirationDate: time.Now().Add(3920 * time.Second),
+		TokenType:      "Bearer",
+		RefreshToken:   "47452c0f-2d7f-4696-9af3-8c53cec89028",
+	}
+
+	// Assert internal state.
+	assert.Equal(t, tsClient, client.httpClient)
+	assert.Equal(t, secret, client.secret)
+	assert.Equal(t, tokensURL, client.tokenExchangeURL)
+	assert.Equal(t, cleanTokensPath, client.cachePath)
+	assert.Equal(t, uploadURL, client.feedUploadURL)
+
+	// Assert internal state: test internal token storage and cache.
+	checkTokensEquality(t, tokens, mustLoadCachedTokens(cleanTokensPath))
+	checkTokensEquality(t, tokens, client.tokens)
+
+	// Cleanup.
+	if err := os.Remove(cleanTokensPath); err != nil {
+		panic(fmt.Sprintf("Remove: %v", err))
+	}
 }

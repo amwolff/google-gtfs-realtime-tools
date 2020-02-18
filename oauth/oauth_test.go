@@ -209,6 +209,21 @@ func getUploadFeedMessageUploadHandler(
 	}
 }
 
+func getRunTokensHandler(t *testing.T, secret clientSecret) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		checkRefreshRequestCorrectness(t, r, secret, "FILL 01")
+
+		// Return desired response.
+		fmt.Fprint(w, `{"access_token":"FILL 02","expires_in":5,"token_type":"Bearer"}`)
+	}
+}
+
+func getRunUploadHandler(t *testing.T, file []byte) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// TODO: add checks...
+	}
+}
+
 func mustLoadCachedTokens(path string) tokenData {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -645,4 +660,21 @@ func TestClient_UploadFeedMessage(t *testing.T) {
 	if err := os.Remove(cleanTokensPath); err != nil {
 		panic(fmt.Sprintf("Remove: %v", err))
 	}
+}
+
+func TestClient_Run(t *testing.T) {
+	// secret := mustLoadClientSecretsJSON()
+	//
+	// mux := http.NewServeMux()
+	// mux.Handle("/tokens", getRunTokensHandler(t, secret))
+	// mux.Handle("/upload", getRunUploadHandler(t, nil))
+	//
+	// ts := httptest.NewTLSServer(mux)
+	// defer ts.Close()
+	//
+	// secretFile, err := os.Open(filepath.Clean("./testdata/client_secrets.json"))
+	// if err != nil {
+	// 	panic(fmt.Sprintf("Open: %v", err))
+	// }
+	// defer secretFile.Close()
 }

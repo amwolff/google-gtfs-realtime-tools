@@ -2,6 +2,8 @@
 package dummy
 
 import (
+	"log"
+	"os"
 	"time"
 
 	transitrealtime "github.com/amwolff/google-gtfs-realtime-tools/gen/go"
@@ -9,18 +11,28 @@ import (
 )
 
 // DummyProvider is an example implementation of the provider.FeedProvider that
-// streams example data. It does not close the underlying channel.
+// streams example data. It does not close the underlying channel on its own.
 type DummyProvider struct {
-	c     chan<- *transitrealtime.FeedMessage
-	Delay time.Duration
+	l *log.Logger
+	s chan struct{}
+	d time.Duration
 }
 
-func (d *DummyProvider) GetFeedChannel() chan<- *transitrealtime.FeedMessage {
-	return d.c
+// NewDummyProvider returns DummyProvider that sends a message every d.
+func NewDummyProvider(d time.Duration) DummyProvider {
+	return DummyProvider{
+		l: log.New(os.Stdout, "DummyProvider", log.LstdFlags),
+		s: make(chan struct{}),
+		d: d,
+	}
 }
 
-func (d *DummyProvider) Stream(feed chan<- *transitrealtime.FeedMessage) {
-	d.c = feed
+func (d DummyProvider) Close() {
+	d.s <- struct{}{}
+}
+
+func (d DummyProvider) Stream(feed chan<- *transitrealtime.FeedMessage) {
+	defer close(feed)
 
 	fullDataset := transitrealtime.FeedHeader_FULL_DATASET
 	scheduled := transitrealtime.TripDescriptor_SCHEDULED
@@ -28,6 +40,12 @@ func (d *DummyProvider) Stream(feed chan<- *transitrealtime.FeedMessage) {
 	unknownCongestionLevel := transitrealtime.VehiclePosition_UNKNOWN_CONGESTION_LEVEL
 	empty := transitrealtime.VehiclePosition_EMPTY
 	for {
+		select {
+		case <-d.s:
+			return
+		default:
+			d.l.Println("Streaming another dummy FeedMessage")
+		}
 		feed <- &transitrealtime.FeedMessage{
 			Header: &transitrealtime.FeedHeader{
 				GtfsRealtimeVersion: proto.String("2.0"),
@@ -67,6 +85,6 @@ func (d *DummyProvider) Stream(feed chan<- *transitrealtime.FeedMessage) {
 				},
 			},
 		}
-		time.Sleep(d.Delay)
+		time.Sleep(d.d)
 	}
 }

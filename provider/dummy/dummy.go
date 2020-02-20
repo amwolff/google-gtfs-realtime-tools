@@ -46,14 +46,16 @@ func (d DummyProvider) Stream(feed chan<- *transitrealtime.FeedMessage) {
 		default:
 			d.l.Println("Streaming another dummy FeedMessage")
 		}
+		unix := proto.Uint64(uint64(time.Now().Unix()))
 		feed <- &transitrealtime.FeedMessage{
 			Header: &transitrealtime.FeedHeader{
 				GtfsRealtimeVersion: proto.String("2.0"),
 				Incrementality:      &fullDataset,
-				Timestamp:           proto.Uint64(uint64(time.Now().Unix())),
+				Timestamp:           unix,
 			},
 			Entity: []*transitrealtime.FeedEntity{
 				{
+					Id: proto.String("vehicle-position"),
 					Vehicle: &transitrealtime.VehiclePosition{
 						Trip: &transitrealtime.TripDescriptor{
 							TripId:               proto.String("zjd5xAvO"),
@@ -78,7 +80,7 @@ func (d DummyProvider) Stream(feed chan<- *transitrealtime.FeedMessage) {
 						CurrentStopSequence: proto.Uint32(1),
 						StopId:              proto.String("5bAyD0LO"),
 						CurrentStatus:       &inTransitTo,
-						Timestamp:           proto.Uint64(uint64(time.Now().Unix())),
+						Timestamp:           unix,
 						CongestionLevel:     &unknownCongestionLevel,
 						OccupancyStatus:     &empty,
 					},

@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -120,7 +121,7 @@ func getEntity(record []string) (*transitrealtime.FeedEntity, error) {
 
 	t, err := strconv.ParseUint(record[Timestamp], 10, 64)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ParseUint: %w")
 	}
 
 	return &transitrealtime.FeedEntity{
@@ -161,37 +162,65 @@ func NewHistoricalProvider(n int, pathToData string) (
 
 	f, err := os.Open(filepath.Clean(pathToData))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Open: %w", err)
 	}
 	defer f.Close()
 	r, err := gzip.NewReader(f)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("NewReader: %w", err)
 	}
 	defer r.Close()
 
 	csvReader := csv.NewReader(r)
+	if _, err := csvReader.Read(); err != nil { // Discard columns' names.
+		return nil, fmt.Errorf("Read: %w", err)
+	}
 
 	i := transitrealtime.FeedHeader_FULL_DATASET
 
-	var data []*transitrealtime.FeedMessage
+	var (
+		data []*transitrealtime.FeedMessage
+		pre  uint64
+		aux  *transitrealtime.FeedEntity
+	)
 	for {
-		m := &transitrealtime.FeedMessage{
-			Header: &transitrealtime.FeedHeader{
-				GtfsRealtimeVersion: proto.String("2.0"),
-				Incrementality:      &i,
-				Timestamp:           proto.Uint64(t),
-			},
-		}
-		var e []*transitrealtime.FeedEntity
+		var entities []*transitrealtime.FeedEntity
 		for {
+			if aux != nil {
+				entities = append(entities, aux)
+			}
+
 			record, err := csvReader.Read()
 			if err != nil {
 				if errors.Is(err, io.EOF) {
 					goto ret
 				}
-				return nil, err
+				return nil, fmt.Errorf("Read: %w", err)
 			}
+
+			e, err := getEntity(record)
+			if err != nil {
+				return nil, fmt.Errorf("getEntity: %w", err)
+			}
+
+			cur := *e.Vehicle.Timestamp
+			if cur != pre && pre > 0 {
+				pre = cur
+				aux = e
+				break
+			}
+
+			entities = append(entities, e)
+			pre = cur
+			aux = nil
+		}
+		m := &transitrealtime.FeedMessage{
+			Header: &transitrealtime.FeedHeader{
+				GtfsRealtimeVersion: proto.String("2.0"),
+				Incrementality:      &i,
+				Timestamp:           data[0].Entity[0].Vehicle.Timestamp,
+			},
+			Entity: entities,
 		}
 		data = append(data, m)
 	}

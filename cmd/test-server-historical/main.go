@@ -1,14 +1,22 @@
 package main
 
 import (
+	"log"
+	"net/http"
+
+	"github.com/amwolff/google-gtfs-realtime-tools/fetch"
 	"github.com/amwolff/google-gtfs-realtime-tools/provider/historical"
-	"github.com/davecgh/go-spew/spew"
 )
 
 func main() {
-	h, err := historical.NewHistoricalProvider(-1, "./provider/historical/21.csv.gz")
+	p, err := historical.NewHistoricalProvider(1024, "./provider/historical/21.csv.gz")
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
-	spew.Dump(h)
+
+	h := fetch.NewWithCache(p)
+
+	if err := http.ListenAndServe("localhost:8081", h); err != nil {
+		log.Println(err)
+	}
 }

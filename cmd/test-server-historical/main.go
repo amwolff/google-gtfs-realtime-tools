@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	p, err := historical.NewHistoricalProvider(1024, "./provider/historical/21.csv.gz")
+	p, err := historical.NewHistoricalProvider(-1, "./provider/historical/21.csv.gz")
 	if err != nil {
 		log.Fatalln(err)
 	}

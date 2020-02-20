@@ -26,30 +26,6 @@ type HistoricalProvider struct {
 	data []*transitrealtime.FeedMessage
 }
 
-type vehicleRecord struct {
-	TripID              string `csv:"id_kursu"`
-	NextTripID          string `csv:"nast_id_kursu"`
-	RouteID             string `csv:"numer_lini"`
-	NextRouteID         string `csv:"nast_num_lini"`
-	DirectionID         string `csv:"kierunek"`
-	NextDirectionID     string `csv:"nast_kierunek"`
-	StartTime           string `csv:"plan_godz_rozp"`
-	NextStartTime       string `csv:"nast_plan_godz_rozp"`
-	StartDate           time.Time
-	ID                  string  `csv:"nr_radia"`
-	Label               string  `csv:"opis_tabl"`
-	NextLabel           string  `csv:"nast_opis_tabl"`
-	Latitude            float32 `csv:"szerokosc"`
-	Longitude           float32 `csv:"dlugosc"`
-	Bearing             float32 `csv:"wektor"`
-	Odometer            float64 `csv:"droga_wyko"`
-	CurrentStopSequence uint32  `csv:"lp_przyst"`
-	// CurrentStatus   = IN_TRANSIT_TO
-	Timestamp time.Time `csv:"ts"`
-	// CongestionLevel = VehiclePosition_UNKNOWN_CONGESTION_LEVEL
-	// OccupancyStatus = ???
-}
-
 const (
 	TripID              = 7
 	NextTripID          = 19
@@ -232,8 +208,8 @@ func getMessage(entities []*transitrealtime.FeedEntity) *transitrealtime.FeedMes
 }
 
 // NewHistoricalProvider returns initialized instance of HistoricalProvider that
-// pushes up to n messages and any error encountered. If n < 0 it will loop
-// forever.
+// pushes up to n historical data sets and any error encountered. If n < 0 it
+// will loop forever.
 func NewHistoricalProvider(n int, pathToData string) (
 	*HistoricalProvider,
 	error) {
@@ -307,13 +283,21 @@ ret:
 
 func (h *HistoricalProvider) Stream(feed chan<- *transitrealtime.FeedMessage) {
 	defer close(feed)
-	for i := 0; h.n < 0 || h.n < i; i++ {
+	for i := 0; i < h.n || h.n < 0; i++ {
 		var prev time.Time
 		for _, m := range h.data {
 			curr := time.Unix(int64(m.GetHeader().GetTimestamp()), 0)
+
 			h.l.Printf("Serving message with stamp = %v", curr)
 			feed <- m
-			time.Sleep(curr.Sub(prev))
+
+			waitTime := curr.Sub(prev)
+			if waitTime > time.Minute { // Time travel.
+				time.Sleep(time.Minute)
+			} else {
+				time.Sleep(waitTime)
+			}
+
 			prev = curr
 		}
 	}

@@ -68,27 +68,49 @@ func getLatitude(record []string) *float32 {
 }
 
 func getLabel(record []string) *string {
-
+	if len(record[Label]) > 0 {
+		return proto.String(record[Label])
+	}
+	return proto.String(record[NextLabel])
 }
 
-func getStartDate(record []string) *string {
-
+func getStartDate(t uint64) *string {
+	return proto.String(time.Unix(int64(t), 0).Format("20060102"))
 }
 
 func getStartTime(record []string) *string {
+	if len(record[StartTime]) > 0 {
+		return proto.String(record[StartTime])
+	}
+	return proto.String(record[NextStartTime])
+}
 
+func convertDirection(d string) uint32 {
+	if d == "T" {
+		return 1
+	}
+	return 0
 }
 
 func getDirectionId(record []string) *uint32 {
-
+	if len(record[DirectionID]) > 0 {
+		return proto.Uint32(convertDirection(record[DirectionID]))
+	}
+	return proto.Uint32(convertDirection(record[NextDirectionID]))
 }
 
 func getRouteId(record []string) *string {
-
+	if len(record[RouteID]) > 0 {
+		return proto.String(record[RouteID])
+	}
+	return proto.String(record[NextRouteID])
 }
 
 func getTripId(record []string) *string {
-
+	if len(record[TripID]) > 0 {
+		return proto.String(record[TripID])
+	}
+	return proto.String(record[NextTripID])
 }
 
 func getEntity(record []string) (*transitrealtime.FeedEntity, error) {
@@ -109,7 +131,7 @@ func getEntity(record []string) (*transitrealtime.FeedEntity, error) {
 				RouteId:              getRouteId(record),
 				DirectionId:          getDirectionId(record),
 				StartTime:            getStartTime(record),
-				StartDate:            getStartDate(record),
+				StartDate:            getStartDate(t),
 				ScheduleRelationship: &s,
 			},
 			Vehicle: &transitrealtime.VehicleDescriptor{

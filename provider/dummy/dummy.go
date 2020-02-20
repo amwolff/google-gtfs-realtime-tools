@@ -55,7 +55,7 @@ func (d DummyProvider) Stream(feed chan<- *transitrealtime.FeedMessage) {
 			},
 			Entity: []*transitrealtime.FeedEntity{
 				{
-					Id: proto.String("vehicle-position"),
+					Id: proto.String("example-vehicle-position"),
 					Vehicle: &transitrealtime.VehiclePosition{
 						Trip: &transitrealtime.TripDescriptor{
 							TripId:               proto.String("zjd5xAvO"),

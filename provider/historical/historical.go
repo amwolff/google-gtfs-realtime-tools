@@ -288,7 +288,7 @@ func (h *HistoricalProvider) Stream(feed chan<- *transitrealtime.FeedMessage) {
 		for _, m := range h.data {
 			curr := time.Unix(int64(m.GetHeader().GetTimestamp()), 0)
 
-			h.l.Printf("Serving message with stamp = %v", curr)
+			h.l.Printf("Serving message with stamp = %v", curr.UTC())
 			feed <- m
 
 			waitTime := curr.Sub(prev)

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -71,6 +72,11 @@ func getBearing(record []string) (*float32, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ParseFloat: %w", err)
 	}
+
+	if f < 0 {
+		f = math.NaN()
+	}
+
 	return proto.Float32(float32(f)), nil
 }
 
@@ -125,11 +131,11 @@ func getRouteId(record []string) *string {
 	return proto.String(record[NextRouteID])
 }
 
-func getTripId(record []string) *string {
-	if len(record[TripID]) > 0 {
-		return proto.String(record[TripID])
+func getTripId(record []string) string {
+	if record[TripID] != "0" {
+		return record[TripID]
 	}
-	return proto.String(record[NextTripID])
+	return record[NextTripID]
 }
 
 func getEntity(record []string) (*transitrealtime.FeedEntity, error) {
@@ -162,14 +168,19 @@ func getEntity(record []string) (*transitrealtime.FeedEntity, error) {
 	}
 
 	s := transitrealtime.TripDescriptor_SCHEDULED
-	c := transitrealtime.VehiclePosition_IN_TRANSIT_TO
+	var c transitrealtime.VehiclePosition_VehicleStopStatus
+	if *seq == 0 {
+		c = transitrealtime.VehiclePosition_STOPPED_AT
+	} else {
+		c = transitrealtime.VehiclePosition_IN_TRANSIT_TO
+	}
 	l := transitrealtime.VehiclePosition_UNKNOWN_CONGESTION_LEVEL
 
 	return &transitrealtime.FeedEntity{
-		Id: proto.String("vehicle-position-" + record[TripID]),
+		Id: proto.String("vehicle-position-" + getTripId(record)),
 		Vehicle: &transitrealtime.VehiclePosition{
 			Trip: &transitrealtime.TripDescriptor{
-				TripId:               getTripId(record),
+				TripId:               proto.String(getTripId(record)),
 				RouteId:              getRouteId(record),
 				DirectionId:          getDirectionId(record),
 				StartTime:            getStartTime(record),
@@ -208,7 +219,7 @@ func getMessage(entities []*transitrealtime.FeedEntity) *transitrealtime.FeedMes
 }
 
 // NewHistoricalProvider returns initialized instance of HistoricalProvider that
-// pushes up to n historical data sets and any error encountered. If n < 0 it
+// pushes up to n times historical feed and any error encountered. If n < 0 it
 // will loop forever.
 func NewHistoricalProvider(n int, pathToData string) (
 	*HistoricalProvider,
@@ -266,6 +277,7 @@ func NewHistoricalProvider(n int, pathToData string) (
 			}
 
 			entities = append(entities, entity)
+
 			pre = cur
 			aux = nil
 		}

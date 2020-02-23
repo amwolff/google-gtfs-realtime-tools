@@ -9,7 +9,7 @@ import (
 	"github.com/amwolff/google-gtfs-realtime-tools/provider/dummy"
 )
 
-func ExampleProvider() {
+func ExampleFeedProvider() {
 	p := dummy.NewDummyProvider(5 * time.Second)
 	defer p.Close()
 

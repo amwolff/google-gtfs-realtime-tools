@@ -1,5 +1,5 @@
-Go tools to interact with Google Transit APIs
-=============================================
+Go tools to interact with the Google Transit APIs
+=================================================
 
 [![GoDoc](https://godoc.org/github.com/amwolff/google-gtfs-realtime-tools?status.svg)](https://godoc.org/github.com/amwolff/google-gtfs-realtime-tools)
 [![Build Status](https://travis-ci.org/amwolff/google-gtfs-realtime-tools.svg?branch=master)](https://travis-ci.org/amwolff/google-gtfs-realtime-tools)
@@ -7,7 +7,7 @@ Go tools to interact with Google Transit APIs
 ## Overview
 
 Live Transit Updates is a feature within Google Maps that provides users with realtime transit information.
-GTFS Realtime is a data exchange format consumed by Google Transit APIs.
+GTFS Realtime is a data exchange format consumed by the Google Transit APIs.
 The code here aims to make it easier to push or make Google fetch such feed, enabling the feature.
 
 ## Getting started

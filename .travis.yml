@@ -5,3 +5,6 @@ go:
 
 git:
   submodules: false
+
+script:
+  - go test $(go list ./... | grep -v /provider)

@@ -4,7 +4,7 @@
 
 Live Transit Updates is a feature within Google Maps that provides users with realtime transit information.
 GTFS Realtime is a data exchange format consumed by Google Transit APIs.
-The code here aim to make it easier to push or make Google fetch such feed, enabling the feature.
+The code here aims to make it easier to push or make Google fetch such feed, enabling the feature.
 
 ## Getting started
 
@@ -76,8 +76,8 @@ func main() {
 }
 ```
 
-Although *push* seems more modern and sophisticated I strongly encourage to use the *fetch* model, especially if you are a public transportation agency.
+Although *push* seems more modern and sophisticated I strongly encourage you to use the *fetch* model, especially if you are a public transportation agency.
 This way not only Google can fetch realtime transit data but also people like me.
 Opening your data creates opportunities to build better working cities and, of course, the world.
 
-I hope the docs and examples speak for themselves, but if anything seems unclear - feel free to contact me or open an issue here.
+I hope the docs and examples speak for themselves but if anything seems unclear - feel free to contact me or open an issue here.

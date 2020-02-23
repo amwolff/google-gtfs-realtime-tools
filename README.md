@@ -1,8 +1,8 @@
 Go tools to interact with Google Transit APIs
 =============================================
 
-[![Build Status](https://travis-ci.org/amwolff/google-gtfs-realtime-tools.svg?branch=master)](https://travis-ci.org/amwolff/google-gtfs-realtime-tools)
 [![GoDoc](https://godoc.org/github.com/amwolff/google-gtfs-realtime-tools?status.svg)](https://godoc.org/github.com/amwolff/google-gtfs-realtime-tools)
+[![Build Status](https://travis-ci.org/amwolff/google-gtfs-realtime-tools.svg?branch=master)](https://travis-ci.org/amwolff/google-gtfs-realtime-tools)
 
 ## Overview
 

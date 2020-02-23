@@ -8,7 +8,7 @@ import (
 	"github.com/amwolff/google-gtfs-realtime-tools/provider/historical"
 )
 
-func main() {
+func main() { // go run cmd/test-server-historical/main.go
 	p, err := historical.NewHistoricalProvider(-1, "./provider/historical/21.csv.gz")
 	if err != nil {
 		log.Fatalln(err)

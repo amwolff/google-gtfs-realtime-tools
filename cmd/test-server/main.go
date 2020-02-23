@@ -12,7 +12,7 @@ import (
 func main() { // go run -race main.go
 	p := dummy.NewDummyProvider(5 * time.Second)
 	go func() {
-		time.Sleep(7500 * time.Millisecond)
+		time.Sleep(10 * time.Minute)
 		log.Println("Closing DP")
 		p.Close()
 	}()

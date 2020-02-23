@@ -28,31 +28,31 @@ type HistoricalProvider struct {
 }
 
 const (
-	TripID              = 7
-	NextTripID          = 19
-	RouteID             = 4
-	NextRouteID         = 21
-	DirectionID         = 6
-	NextDirectionID     = 23
-	StartTime           = 18
-	NextStartTime       = 20
-	StartDate           = 1
-	ID                  = 2
-	Label               = 28
-	NextLabel           = 29
-	Latitude            = 12
-	Longitude           = 11
-	Bearing             = 30
-	Odometer            = 10
-	CurrentStopSequence = 8
+	tripID              = 7
+	nextTripID          = 19
+	routeID             = 4
+	nextRouteID         = 21
+	directionID         = 6
+	nextDirectionID     = 23
+	startTime           = 18
+	nextStartTime       = 20
+	startDate           = 1
+	id                  = 2
+	label               = 28
+	nextLabel           = 29
+	latitude            = 12
+	longitude           = 11
+	bearing             = 30
+	odometer            = 10
+	currentStopSequence = 8
 	// CurrentStatus   = IN_TRANSIT_TO
-	Timestamp = 1
+	timestamp = 1
 	// CongestionLevel = VehiclePosition_UNKNOWN_CONGESTION_LEVEL
 	// OccupancyStatus = ???
 )
 
 func getCurrentStopSequence(record []string) (*uint32, error) {
-	u, err := strconv.ParseUint(record[CurrentStopSequence], 10, 32)
+	u, err := strconv.ParseUint(record[currentStopSequence], 10, 32)
 	if err != nil {
 		return nil, fmt.Errorf("ParseUint: %w", err)
 	}
@@ -60,7 +60,7 @@ func getCurrentStopSequence(record []string) (*uint32, error) {
 }
 
 func getOdometer(record []string) (*float64, error) {
-	f, err := strconv.ParseFloat(record[Odometer], 64)
+	f, err := strconv.ParseFloat(record[odometer], 64)
 	if err != nil {
 		return nil, fmt.Errorf("ParseFloat: %w", err)
 	}
@@ -68,7 +68,7 @@ func getOdometer(record []string) (*float64, error) {
 }
 
 func getBearing(record []string) (*float32, error) {
-	f, err := strconv.ParseFloat(record[Bearing], 32)
+	f, err := strconv.ParseFloat(record[bearing], 32)
 	if err != nil {
 		return nil, fmt.Errorf("ParseFloat: %w", err)
 	}
@@ -81,7 +81,7 @@ func getBearing(record []string) (*float32, error) {
 }
 
 func getLongitude(record []string) (*float32, error) {
-	f, err := strconv.ParseFloat(record[Longitude], 32)
+	f, err := strconv.ParseFloat(record[longitude], 32)
 	if err != nil {
 		return nil, fmt.Errorf("ParseFloat: %w", err)
 	}
@@ -89,7 +89,7 @@ func getLongitude(record []string) (*float32, error) {
 }
 
 func getLatitude(record []string) (*float32, error) {
-	f, err := strconv.ParseFloat(record[Latitude], 32)
+	f, err := strconv.ParseFloat(record[latitude], 32)
 	if err != nil {
 		return nil, fmt.Errorf("ParseFloat: %w", err)
 	}
@@ -97,17 +97,17 @@ func getLatitude(record []string) (*float32, error) {
 }
 
 func getLabel(record []string) *string {
-	if len(record[Label]) > 0 {
-		return proto.String(record[Label])
+	if len(record[label]) > 0 {
+		return proto.String(record[label])
 	}
-	return proto.String(record[NextLabel])
+	return proto.String(record[nextLabel])
 }
 
 func getStartTime(record []string) *string {
-	if len(record[StartTime]) > 0 {
-		return proto.String(record[StartTime])
+	if len(record[startTime]) > 0 {
+		return proto.String(record[startTime])
 	}
-	return proto.String(record[NextStartTime])
+	return proto.String(record[nextStartTime])
 }
 
 func convertDirection(d string) uint32 {
@@ -118,28 +118,28 @@ func convertDirection(d string) uint32 {
 }
 
 func getDirectionId(record []string) *uint32 {
-	if len(record[DirectionID]) > 0 {
-		return proto.Uint32(convertDirection(record[DirectionID]))
+	if len(record[directionID]) > 0 {
+		return proto.Uint32(convertDirection(record[directionID]))
 	}
-	return proto.Uint32(convertDirection(record[NextDirectionID]))
+	return proto.Uint32(convertDirection(record[nextDirectionID]))
 }
 
 func getRouteId(record []string) *string {
-	if len(record[RouteID]) > 0 {
-		return proto.String(record[RouteID])
+	if len(record[routeID]) > 0 {
+		return proto.String(record[routeID])
 	}
-	return proto.String(record[NextRouteID])
+	return proto.String(record[nextRouteID])
 }
 
 func getTripId(record []string) string {
-	if record[TripID] != "0" {
-		return record[TripID]
+	if record[tripID] != "0" {
+		return record[tripID]
 	}
-	return record[NextTripID]
+	return record[nextTripID]
 }
 
 func getEntity(record []string) (*transitrealtime.FeedEntity, error) {
-	t, err := time.Parse("2006-01-02 15:04:05.999999-07", record[Timestamp])
+	t, err := time.Parse("2006-01-02 15:04:05.999999-07", record[timestamp])
 	if err != nil {
 		return nil, fmt.Errorf("Parse: %w", err)
 	}
@@ -188,7 +188,7 @@ func getEntity(record []string) (*transitrealtime.FeedEntity, error) {
 				ScheduleRelationship: &s,
 			},
 			Vehicle: &transitrealtime.VehicleDescriptor{
-				Id:    proto.String(record[ID]),
+				Id:    proto.String(record[id]),
 				Label: getLabel(record),
 			},
 			Position: &transitrealtime.Position{
@@ -218,9 +218,9 @@ func getMessage(entities []*transitrealtime.FeedEntity) *transitrealtime.FeedMes
 	}
 }
 
-// NewHistoricalProvider returns initialized instance of HistoricalProvider that
-// pushes up to n times historical feed and any error encountered. If n < 0 it
-// will loop forever.
+// NewHistoricalProvider returns initialized HistoricalProvider that pushes up
+// to n times historical feed and any error encountered. If n < 0 it will loop
+// forever.
 func NewHistoricalProvider(n int, pathToData string) (
 	*HistoricalProvider,
 	error) {

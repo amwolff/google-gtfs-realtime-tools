@@ -1,5 +1,5 @@
 // Package provider contains interface used to separate Data Source from
-// communication with the API.
+// communication with the Google Transit APIs.
 package provider
 
 import transitrealtime "github.com/amwolff/google-gtfs-realtime-tools/gen/go"

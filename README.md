@@ -1,4 +1,7 @@
-# Tools to interact with Google Transit APIs
+Go tools to interact with Google Transit APIs
+==========================================
+
+[![GoDoc](https://godoc.org/github.com/amwolff/google-gtfs-realtime-tools?status.svg)](https://godoc.org/github.com/amwolff/google-gtfs-realtime-tools)
 
 ## Overview
 
@@ -81,3 +84,5 @@ This way not only Google can fetch realtime transit data but also people like me
 Opening your data creates opportunities to build better working cities and, of course, the world.
 
 I hope the docs and examples speak for themselves but if anything seems unclear - feel free to contact me or open an issue here.
+
+Working examples can be found [here](https://github.com/amwolff/google-gtfs-realtime-tools/tree/master/cmd).

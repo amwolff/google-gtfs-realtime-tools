@@ -1,6 +1,4 @@
 // Package fetch implements fetch model of delivering GTFS-realtime feed.
-// TODO: docs?
-// TODO: make debug mode optional (this is debug mode now)
 package fetch
 
 import (
@@ -11,6 +9,9 @@ import (
 	"github.com/amwolff/google-gtfs-realtime-tools/provider"
 	"github.com/golang/protobuf/proto"
 )
+
+// TODO: docs?
+// TODO: make debug mode optional (this is debug mode now)
 
 type WithCache struct {
 	closed bool

@@ -54,7 +54,7 @@ func main() {
 }
 ```
 
-You can also use `UploadFeedMessage` method to have more control over the process.
+You can also use the `UploadFeedMessage` method to have more control over the process.
 
 ### Fetch
 

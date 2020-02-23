@@ -1,5 +1,5 @@
 Go tools to interact with Google Transit APIs
-==========================================
+=============================================
 
 [![GoDoc](https://godoc.org/github.com/amwolff/google-gtfs-realtime-tools?status.svg)](https://godoc.org/github.com/amwolff/google-gtfs-realtime-tools)
 
